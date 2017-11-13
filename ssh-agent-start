@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# File containing ssh agent variables
+SSH_AGENT_FILE="/tmp/.SSH_AGENT_PROC.$UID"
+if [ -d "$HOME/tmp" ]; then
+    SSH_AGENT_FILE="$HOME/tmp/.SSH_AGENT_PROC"
+fi
+
+# Check if agent variable invalid and agent file exists
+if [[ ! -e "$SSH_AUTH_SOCK" && -e "$SSH_AGENT_FILE" ]]; then
+    # Agent file found, import it
+    source "$SSH_AGENT_FILE" >/dev/null
+fi
+
+# Check if ssh agent variables empty
+if [[ -z "$SSH_AUTH_SOCK" || -z "$SSH_AGENT_PID" ]]; then
+    # Empty
+    if [[ ! -e "$SSH_AGENT_FILE" ]]; then
+        # No agent file found, start agent
+        ssh-agent >"$SSH_AGENT_FILE"
+    fi
+    # Import agent file
+    source "$SSH_AGENT_FILE" >/dev/null
+fi
+
+# Double-check ssh agent variables
+if [[ ! -e "$SSH_AUTH_SOCK" ]]; then
+    # Variable contains invalid value, start agent
+    ssh-agent >"$SSH_AGENT_FILE"
+    # Import agent file
+    source "$SSH_AGENT_FILE" >/dev/null
+fi
+
+# SSH wrapper that adds the key(s) to the agent
+ssh()
+{
+    # Check, load keys on ssh
+    if ! ssh-add -l &>/dev/null; then
+        # No keys loaded
+        for i in $HOME/.ssh/*; do
+            # Determine if file is a key
+            if head -n 1 "$i" | grep -I "PRIVATE KEY" &>/dev/null; then
+                # Found key to add
+                echo "Adding SSH key: $i..."
+                ssh-add "$i" 0<&- &>/dev/null
+            fi
+        done
+    fi
+    # Update agent helper file (so it's not removed by a cleanup job)
+    touch "$SSH_AGENT_FILE"
+    # Run SSH (agent running)
+    command ssh "$@"
+}
+
