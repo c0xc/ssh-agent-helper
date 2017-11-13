@@ -35,7 +35,14 @@ fi
 ssh()
 {
     # Check, load keys on ssh
+    local do_load=false
+    if [ -n "${SSH_AGENT_HELPER_LOAD_KEYS-}" ]; then
+        do_load=true
+    fi
     if ! ssh-add -l &>/dev/null; then
+        do_load=true
+    fi
+    if [ $do_load == true ]; then
         # No keys loaded
         for i in $HOME/.ssh/*; do
             # Determine if file is a key

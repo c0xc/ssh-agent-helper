@@ -68,6 +68,10 @@ to make it obvious that the file is still in use;
 and it won't be removed by a cleanup job that
 deletes old files in ~/tmp that way.
 
+If you set this environment variable, all keys will be loaded (again):
+
+    SSH_AGENT_HELPER_LOAD_KEYS
+
 
 
 Author
